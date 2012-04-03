@@ -5,40 +5,51 @@
 
 = REQUIREMENTS:
 
+* AWS account and an S3 bucket
+
 == Platform:
 
 Tested on Ubuntu.
 
-== Cookbooks:
+== Dependencies:
 
-Opscode cookbooks (http://github.com/opscode/cookbooks/tree/master)
-
-* build-essential
+* build-essential cookbook (Opscode: http://github.com/opscode/cookbooks/tree/master)
 
 = ATTRIBUTES:
 
 Default:
 
-* node[:nodejs][:versions] - release versions of node to build & install
-* node[:nodejs][:default_version] - default version to which links are created under /usr/local/bin
-* node[:nodejs][:base_dir] - main directory under which node versions will be installed, default /opt/nodejs
-* node[:nodejs][:base_url] - base download url (extends to [base_url]/[distribution codename]/nodejs-[version].tgz)
+* nodejs[:versions] - release versions of node to build & install
+* nodejs[:default_version] - default version to which links are created under /usr/local/bin
+* nodejs[:base_dir] - main directory under which node versions will be installed, default /opt/nodejs
+* nodejs[:base_url] - base download url (extends to [base_url]/[distribution codename]/nodejs-[version].tgz)
 
 = DATA BAG:
 
 The builder recipe uses "aws" item from data bag "nodejs"
 
-== Attributes:
+Attributes:
 
 * aws_id - Your AWS ID
 * aws_secret - Your AWS Secret Key
 * s3_bucket - S3 bucket used to store the built binary packages
 
+Example:
+
+  {
+    "id": "aws",
+    "aws_id": "YOUR_AWS_ACCESS_KEY_ID",
+    "aws_secret": "YOUR_AWS_SECRET_ACCESS_KEY",
+    "s3_bucket": "YOUR_BUCKET_NAME"
+  }
+
 = USAGE:
 
-Include nodejs::builder recipe on hosts where you want to build nodejs versions
+Include nodejs::builder recipe on host(s) where you want to build nodejs versions.
 
-Include nodejs recipe to install node versions from the S3 bucket.
+Include nodejs recipe on host(s) where you want to install the node versions.
+
+You should configure at least the nodejs[:base_url] attribute.
 
 = LICENSE:
 
