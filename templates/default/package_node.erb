@@ -1,0 +1,78 @@
+#!/bin/bash
+# Derived from Heroku, Inc. https://github.com/heroku/heroku-buildpack-nodejs/support/package_nodejs
+# MIT License: https://github.com/heroku/heroku-buildpack-nodejs/blob/master/LICENSE
+
+set -e
+
+node_version="$1"
+
+if [ "$node_version" == "" ]; then
+  echo "usage: $0 VERSION"
+  exit 1
+fi
+
+if [ "$AWS_ID" == "" ]; then
+  echo "must set AWS_ID"
+  exit 1
+fi
+
+if [ "$AWS_SECRET" == "" ]; then
+  echo "must set AWS_SECRET"
+  exit 1
+fi
+
+if [ "$S3_BUCKET" == "" ]; then
+  echo "must set S3_BUCKET"
+  exit 1
+fi
+
+basedir="$( cd -P "$( dirname "$0" )" && pwd )"
+
+# make a temp directory
+tempdir="$( mktemp -t node_XXXX )"
+rm -rf $tempdir
+mkdir -p $tempdir
+pushd $tempdir
+
+# download and extract node
+wget http://nodejs.org/dist/v${node_version}/node-v${node_version}.tar.gz -O node.tgz || exit 1
+tar xzf node.tgz
+
+# go into node dir
+pushd node-v${node_version}
+
+# build and package nodejs
+./configure --prefix=/opt/nodejs/versions/v${node_version} && make
+make install DESTDIR=output
+tar -C output -czvf $tempdir/node-${node_version}.tgz .
+
+os_release=`/usr/bin/lsb_release -cs`
+
+# upload nodejs to s3
+$basedir/s3 put $S3_BUCKET \
+  ${os_release}/nodejs-${node_version}.tgz $tempdir/node-${node_version}.tgz
+
+if [ $? -ne 0 ]; then
+  echo "S3 PUT returned non-zero exit code"
+  exit 1
+fi
+
+echo "S3 PUT successful."
+
+# go into scons
+pushd tools/scons
+
+# package scons
+scons_version=$(ls | grep "scons-local" | cut -d- -f3)
+tar czf $tempdir/scons-${scons_version}.tgz *
+
+# upload scons to s3
+$basedir/s3 put $S3_BUCKET \
+ ${os_release}/scons-${scons_version}.tgz $tempdir/scons-${scons_version}.tgz
+if [ $? -ne 0 ]; then
+  echo "S3 PUT returned non-zero exit code"
+  exit 1
+fi
+
+echo "S3 PUT successful."
+
