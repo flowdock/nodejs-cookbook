@@ -91,7 +91,7 @@ s3_signature_string() {
  local mime="${6}"
  local md5="${5}"
  local headers="${7}"
- printf "%s\n%s\n%s\n%s\n%s%s%s" \
+ printf "%s\n%s\n%s\n%s\n%s\n%s%s" \
    "${verb}" "${md5}" "${mime}" "${date}" \
    "${headers}" "${bucket}" "${resource}" | \
    openssl dgst -sha1 -hmac "${AWS_SECRET}" -binary | openssl base64 -e -a
@@ -134,6 +134,7 @@ s3_curl() {
        elif [[ -f ${4} ]]; then
          md5="$(openssl dgst -md5 -binary "${4}"|openssl base64 -e -a)"
          arg="-T" inout="${4}"
+         headers[${#headers[@]}]="x-amz-acl: public-read"
          headers[${#headers[@]}]="Expect: 100-continue"
        else
          die "Cannot write non-existing file ${4}"
@@ -145,7 +146,7 @@ s3_curl() {
   *) die "Unknown verb ${1}.  It probably would not have worked anyways." ;;
  esac
  date="$(TZ=UTC date '+%a, %e %b %Y %H:%M:%S %z')"
- sig=$(s3_signature_string ${1} "${date}" "${bucket}" "${remote}" "${md5}")
+ sig=$(s3_signature_string ${1} "${date}" "${bucket}" "${remote}" "${md5}" "${mime}" "x-amz-acl:public-read")
 
  headers[${#headers[@]}]="Authorization: AWS ${AWS_ID}:${sig}"
  headers[${#headers[@]}]="Date: ${date}"
